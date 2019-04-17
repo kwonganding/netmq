@@ -127,12 +127,12 @@ Sockets and timers may be safely added and removed from the poller while it is r
 
 Note that implementations of `ISocketPollable` include `NetMQSocket`, `NetMQActor` and `NetMQBeacon`. Therefore a `NetMQPoller` can observe any of these types.
 
-* `AddSocket(ISocketPollable)`
-* `RemoveSocket(ISocketPollable)`
-* `AddTimer(NetMQTimer)`
-* `RemoveTimer(NetMQTimer)`
-* `AddPollInSocket(System.Net.Sockets.Socket, Action<Socket>)`
-* `RemovePollInSocket(System.Net.Sockets.Socket)`
+* `Add(ISocketPollable)`
+* `Remove(ISocketPollable)`
+* `Add(NetMQTimer)`
+* `Remove(NetMQTimer)`
+* `Add(System.Net.Sockets.Socket, Action<Socket>)`
+* `Remove(System.Net.Sockets.Socket)`
 
 ## Controlling polling
 
@@ -227,4 +227,4 @@ To solve this you can limit the number of messages that can be fetch in one batc
 
 ## Further Reading
 
-A good place to look for more information and code samples is the [`Poller` unit test source](https://github.com/zeromq/netmq/blob/master/src/NetMQ.Tests/PollerTests.cs).
+A good place to look for more information and code samples is the [`Poller` unit test source](https://github.com/zeromq/netmq/blob/master/src/NetMQ.Tests/NetMQPollerTest.cs).

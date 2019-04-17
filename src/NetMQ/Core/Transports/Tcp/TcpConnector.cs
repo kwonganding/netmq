@@ -202,7 +202,7 @@ namespace NetMQ.Core.Transports.Tcp
             {
                 OutCompleted(ex.SocketErrorCode, 0);
             }
-            // TerminatingException can occur in above call to EventConnectDelayed via 
+            // TerminatingException can occur in above call to EventConnectDelayed via
             // MonitorEvent.Write if corresponding PairSocket has been sent Term command
             catch (TerminatingException)
             {}
@@ -225,26 +225,19 @@ namespace NetMQ.Core.Transports.Tcp
                 Close();
 
                 // Try again to connect after a time,
-                // as long as the error is one of these..
-                if (socketError == SocketError.ConnectionRefused || socketError == SocketError.TimedOut ||
-                    socketError == SocketError.ConnectionAborted ||
-                    socketError == SocketError.HostUnreachable || socketError == SocketError.NetworkUnreachable ||
-                    socketError == SocketError.NetworkDown || socketError == SocketError.AccessDenied)
-                {
-                    if (m_options.ReconnectIvl >= 0)
-                        AddReconnectTimer();
-                }
-                else
-                {
-                    throw NetMQException.Create(socketError);
-                }
+                if (m_options.ReconnectIvl >= 0)
+                    AddReconnectTimer();
             }
             else
             {
                 m_ioObject.RemoveSocket(m_s);
                 m_handleValid = false;
 
-                m_s.NoDelay = true;
+                try {
+                    m_s.NoDelay = true;
+                } catch (ArgumentException ex) {
+                    // OSX sometime fail while the socket is still connecting
+                }
 
                 // As long as the TCP keep-alive option is not -1 (indicating no change),
                 if (m_options.TcpKeepalive != -1)

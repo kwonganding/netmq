@@ -1,16 +1,16 @@
-/*      
+/*
     Copyright (c) 2009-2011 250bpm s.r.o.
     Copyright (c) 2007-2009 iMatix Corporation
     Copyright (c) 2011 VMware, Inc.
     Copyright (c) 2007-2015 Other contributors as noted in the AUTHORS file
 
     This file is part of 0MQ.
-        
+
     0MQ is free software; you can redistribute it and/or modify it under
     the terms of the GNU Lesser General Public License as published by
     the Free Software Foundation; either version 3 of the License, or
     (at your option) any later version.
-    
+
     0MQ is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
@@ -148,6 +148,8 @@ namespace NetMQ.Core
                     return new Pair.PairSession(ioThread, connect, socket, options, addr);
                 case ZmqSocketType.Stream:
                     return new Stream.StreamSession(ioThread, connect, socket, options, addr);
+                case ZmqSocketType.Peer:
+                    return new Peer.PeerSession(ioThread, connect, socket, options, addr);
                 default:
                     throw new InvalidException("SessionBase.Create called with invalid SocketType of " + options.SocketType);
             }
@@ -550,7 +552,8 @@ namespace NetMQ.Core
             // For delayed connect situations, terminate the pipe
             // and reestablish later on
             if (m_pipe != null && m_options.DelayAttachOnConnect
-                && m_addr.Protocol != Address.PgmProtocol && m_addr.Protocol != Address.EpgmProtocol)
+                && m_addr.Protocol != Address.PgmProtocol && m_addr.Protocol != Address.EpgmProtocol && 
+                m_options.SocketType != ZmqSocketType.Peer)
             {
                 m_pipe.Hiccup();
                 m_pipe.Terminate(false);
@@ -611,7 +614,7 @@ namespace NetMQ.Core
         }
 
         /// <summary>
-        /// Override the ToString method to also show the socket-id. 
+        /// Override the ToString method to also show the socket-id.
         /// </summary>
         /// <returns>the type of this object and [ socket-id ]</returns>
         public override string ToString()

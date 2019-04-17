@@ -1,39 +1,64 @@
-﻿using System;
+﻿#if !NET35
+using System;
+using System.Net.Sockets;
 using System.Threading;
-using NUnit.Framework;
+using System.Threading.Tasks;
+using NetMQ.Sockets;
+using Xunit;
 
 namespace NetMQ.Tests
 {
-    [TestFixture]
-    public class NetMQQueueTests
+    public class NetMQQueueTests : IClassFixture<CleanupAfterFixture>
     {
-        [Test]
+        public NetMQQueueTests() => NetMQConfig.Cleanup();
+
+        [Fact]
         public void EnqueueDequeue()
         {
             using (var queue = new NetMQQueue<int>())
             {
                 queue.Enqueue(1);
 
-                Assert.AreEqual(1, queue.Dequeue());
+                Assert.Equal(1, queue.Dequeue());
             }
         }
 
-        [Test]
+        [Fact]
+        public void EnqueueShouldNotBlockWhenCapacityIsZero()
+        {
+            using (var mockSocket = new PairSocket())
+            using (var queue = new NetMQQueue<int>())
+            {
+                int socketWatermarkCapacity = mockSocket.Options.SendHighWatermark + mockSocket.Options.ReceiveHighWatermark;
+
+                Task task = Task.Run(() =>
+                {
+                    for (int i = 0; i < socketWatermarkCapacity + 100; i++)
+                    {
+                        queue.Enqueue(i);
+                    }
+                });
+
+                bool completed = task.Wait(TimeSpan.FromSeconds(1));
+                Assert.True(completed, "Enqueue task should have completed " + socketWatermarkCapacity + " enqueue within 1 second");
+            }
+        }
+
+        [Fact]
         public void TryDequeue()
         {
             using (var queue = new NetMQQueue<int>())
             {
-                int result;
-                Assert.IsFalse(queue.TryDequeue(out result, TimeSpan.FromMilliseconds(100)));
+                Assert.False(queue.TryDequeue(out int result, TimeSpan.FromMilliseconds(100)));
 
                 queue.Enqueue(1);
 
-                Assert.IsTrue(queue.TryDequeue(out result, TimeSpan.FromMilliseconds(100)));
-                Assert.AreEqual(1, result);
+                Assert.True(queue.TryDequeue(out result, TimeSpan.FromMilliseconds(100)));
+                Assert.Equal(1, result);
             }
         }
 
-        [Test]
+        [Fact]
         public void WithPoller()
         {
             using (var queue = new NetMQQueue<int>())
@@ -43,16 +68,17 @@ namespace NetMQ.Tests
 
                 queue.ReceiveReady += (sender, args) =>
                 {
-                    Assert.AreEqual(1, queue.Dequeue());
+                    Assert.Equal(1, queue.Dequeue());
                     manualResetEvent.Set();
                 };
 
                 poller.RunAsync();
 
-                Assert.IsFalse(manualResetEvent.WaitOne(100));
+                Assert.False(manualResetEvent.WaitOne(100));
                 queue.Enqueue(1);
-                Assert.IsTrue(manualResetEvent.WaitOne(100));
+                Assert.True(manualResetEvent.WaitOne(100));
             }
         }
     }
 }
+#endif

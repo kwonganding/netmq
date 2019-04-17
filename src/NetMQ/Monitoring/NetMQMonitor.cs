@@ -24,13 +24,11 @@ namespace NetMQ.Monitoring
     {
         [NotNull] private readonly NetMQSocket m_monitoringSocket;
         private readonly bool m_ownsMonitoringSocket;
-        [CanBeNull] private ISocketPollableCollection m_attachedPoller;
+        [CanBeNull] private NetMQPoller m_attachedPoller;
         private int m_cancel;
 
         private readonly ManualResetEvent m_isStoppedEvent = new ManualResetEvent(true);
 
-        /// <summary>
-        /// </summary>
         public NetMQMonitor([NotNull] NetMQSocket monitoredSocket, [NotNull] string endpoint, SocketEvents eventsToMonitor)
         {
             Endpoint = endpoint;
@@ -218,9 +216,7 @@ namespace NetMQ.Monitoring
             }
         }
 
-        /// <summary>
-        /// </summary>
-        public void AttachToPoller([NotNull] ISocketPollableCollection poller)
+        public void AttachToPoller([NotNull] NetMQPoller poller)
         {
             if (poller == null)
                 throw new ArgumentNullException(nameof(poller));
@@ -233,14 +229,20 @@ namespace NetMQ.Monitoring
             poller.Add(m_monitoringSocket);
         }
 
-        /// <summary>
-        /// </summary>
         public void DetachFromPoller()
+        {
+            DetachFromPoller(false);
+        }
+        
+        private void DetachFromPoller(bool dispose)
         {
             if (m_attachedPoller == null)
                 throw new InvalidOperationException("Not attached to a poller");
-
-            m_attachedPoller.Remove(m_monitoringSocket);
+            
+            if (dispose)
+                m_attachedPoller.RemoveAndDispose(m_monitoringSocket);
+            else
+                m_attachedPoller.Remove(m_monitoringSocket);
             m_attachedPoller = null;
             InternalClose();
         }
@@ -250,7 +252,7 @@ namespace NetMQ.Monitoring
         /// </summary>
         /// <exception cref="InvalidOperationException">The Monitor must not have already started nor attached to a poller.</exception>
         public void Start()
-        {            
+        {
             if (IsRunning)
                 throw new InvalidOperationException("Monitor already started");
 
@@ -322,9 +324,11 @@ namespace NetMQ.Monitoring
             if (!disposing)
                 return;
 
-            if (m_attachedPoller != null)
+            bool attachedToPoller = m_attachedPoller != null; 
+
+            if (attachedToPoller)
             {
-                DetachFromPoller();
+                DetachFromPoller(m_ownsMonitoringSocket);
             }
             else if (!m_isStoppedEvent.WaitOne(0))
             {
@@ -339,7 +343,7 @@ namespace NetMQ.Monitoring
             m_isStoppedEvent.Dispose();
 #endif
 
-            if (m_ownsMonitoringSocket)
+            if (m_ownsMonitoringSocket && !attachedToPoller)
             {
                 m_monitoringSocket.Dispose();
             }

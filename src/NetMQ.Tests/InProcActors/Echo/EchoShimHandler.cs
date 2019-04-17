@@ -9,12 +9,12 @@ namespace NetMQ.Tests.InProcActors.Echo
     /// and should deal with any command workload, as well as sending back to the
     /// other end of the PairSocket which calling code would receive by using the
     /// Actor classes' various ReceiveXXX() methods
-    /// 
+    ///
     /// This is a VERY simple protocol. It just demonstrates what you would need
     /// to do to implement your own Shim handler.
-    /// 
+    ///
     /// The only things you MUST do are
-    /// 
+    ///
     /// 1. Bad commands should always send the following message
     ///    "Error: invalid message to actor"
     /// 2. When we receive a command from the actor telling us to exit the pipeline we should immediately
@@ -31,7 +31,7 @@ namespace NetMQ.Tests.InProcActors.Echo
             {
                 try
                 {
-                    //Message for this actor/shim handler is expected to be 
+                    //Message for this actor/shim handler is expected to be
                     //Frame[0] : Command
                     //Frame[1] : Payload
                     //
@@ -41,19 +41,19 @@ namespace NetMQ.Tests.InProcActors.Echo
 
                     string command = msg[0].ConvertToString();
 
-                    if (command == NetMQActor.EndShimMessage)
-                        break;
-
-                    if (command == "ECHO")
+                    switch (command)
                     {
-                        shim.SendFrame($"ECHO BACK : {msg[1].ConvertToString()}");
-                    }
-                    else
-                    {
-                        shim.SendFrame("Error: invalid message to actor");
+                        case NetMQActor.EndShimMessage:
+                            return;
+                        case "ECHO":
+                            shim.SendFrame($"ECHO BACK : {msg[1].ConvertToString()}");
+                            break;
+                        default:
+                            shim.SendFrame("Error: invalid message to actor");
+                            break;
                     }
                 }
-                // You WILL need to decide what Exceptions should be caught here, this is for 
+                // You WILL need to decide what Exceptions should be caught here, this is for
                 // demonstration purposes only, any unhandled fault will bubble up to caller's code
                 catch (Exception e)
                 {

@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Linq;
+using System.Threading;
 using JetBrains.Annotations;
 using NetMQ.Core;
+#if NET40
 using NetMQ.Core.Utils;
+#endif
 
 namespace NetMQ
 {
@@ -16,11 +19,11 @@ namespace NetMQ
     {
         private readonly SocketBase m_socketHandle;
         private readonly NetMQSocketEventArgs m_socketEventArgs;
-        private readonly Selector m_selector;
+        private readonly NetMQSelector m_netMqSelector;
 
         private EventHandler<NetMQSocketEventArgs> m_receiveReady;
         private EventHandler<NetMQSocketEventArgs> m_sendReady;
-        private bool m_isClosed;
+        private int m_isClosed;
 
         internal enum DefaultAction
         {
@@ -37,7 +40,7 @@ namespace NetMQ
         internal NetMQSocket(ZmqSocketType socketType, string connectionString, DefaultAction defaultAction)
         {
             m_socketHandle = NetMQConfig.Context.CreateSocket(socketType);
-            m_selector = new Selector();
+            m_netMqSelector = new NetMQSelector();
             Options = new SocketOptions(this);
             m_socketEventArgs = new NetMQSocketEventArgs(this);
 
@@ -45,27 +48,27 @@ namespace NetMQ
 
             if (!string.IsNullOrEmpty(connectionString))
             {
-                var endpoints =
-                    connectionString.Split(new[] {','}, StringSplitOptions.RemoveEmptyEntries)
-                        .Select(a => a.Trim()).Where(a=> !string.IsNullOrEmpty(a));
+                var endpoints = connectionString
+                    .Split(new[] { ',' }, StringSplitOptions.RemoveEmptyEntries)
+                    .Select(a => a.Trim())
+                    .Where(a => !string.IsNullOrEmpty(a));
 
-                foreach (string endpoint in endpoints)
+                foreach (var endpoint in endpoints)
                 {
-                    if (endpoint[0] == '@')
+                    switch (endpoint[0])
                     {
-                        Bind(endpoint.Substring(1));
-                    }
-                    else if (endpoint[0] == '>')
-                    {
-                        Connect(endpoint.Substring(1));
-                    }
-                    else if (defaultAction == DefaultAction.Connect)
-                    {
-                        Connect(endpoint);
-                    }
-                    else
-                    {
-                        Bind(endpoint);
+                        case '@':
+                            Bind(endpoint.Substring(1));
+                            break;
+                        case '>':
+                            Connect(endpoint.Substring(1));
+                            break;
+                        default:
+                            if (defaultAction == DefaultAction.Connect)
+                                Connect(endpoint);
+                            else
+                                Bind(endpoint);
+                            break;
                     }
                 }
             }
@@ -77,7 +80,7 @@ namespace NetMQ
         /// <param name="socketHandle">a SocketBase object to assign to the new socket</param>
         internal NetMQSocket([NotNull] SocketBase socketHandle)
         {
-            m_selector = new Selector();
+            m_netMqSelector = new NetMQSelector();
             m_socketHandle = socketHandle;
             Options = new SocketOptions(this);
             m_socketEventArgs = new NetMQSocketEventArgs(this);
@@ -242,10 +245,8 @@ namespace NetMQ
         /// <summary>Closes this socket, rendering it unusable. Equivalent to calling <see cref="Dispose()"/>.</summary>
         public void Close()
         {
-            if (m_isClosed)
+            if (Interlocked.CompareExchange(ref m_isClosed, 1, 0) != 0)
                 return;
-
-            m_isClosed = true;
 
             m_socketHandle.CheckDisposed();
             m_socketHandle.Close();
@@ -296,9 +297,9 @@ namespace NetMQ
         /// <exception cref="TerminatingException">The socket has been stopped.</exception>
         public PollEvents Poll(PollEvents pollEvents, TimeSpan timeout)
         {
-            SelectItem[] items = { new SelectItem(SocketHandle, pollEvents) };
+            NetMQSelector.Item[] items = { new NetMQSelector.Item(this, pollEvents) };
 
-            m_selector.Select(items, 1, (long)timeout.TotalMilliseconds);
+            m_netMqSelector.Select(items, 1, (long)timeout.TotalMilliseconds);
             return items[0].ResultEvent;
         }
 
@@ -331,7 +332,7 @@ namespace NetMQ
         /// <param name="events">the given PollEvents that dictates when of the two events to raise</param>
         internal void InvokeEvents(object sender, PollEvents events)
         {
-            if (m_isClosed)
+            if (m_isClosed != 0)
                 return;
 
             m_socketEventArgs.Init(events);
@@ -526,6 +527,9 @@ namespace NetMQ
 
             Close();
         }
+
+        /// <inheritdoc />
+        public bool IsDisposed => m_isClosed != 0;
 
         #endregion
     }

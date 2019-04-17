@@ -1,14 +1,16 @@
-﻿using System;
+﻿#if !NET35
+using System;
 using System.Diagnostics;
 using NetMQ.Sockets;
-using NUnit.Framework;
+using Xunit;
 
 namespace NetMQ.Tests
 {
-    [TestFixture]
-    public class RequestWithRetryTests
+    public class RequestWithRetryTests : IClassFixture<CleanupAfterFixture>
     {
-        [Test]
+        public RequestWithRetryTests() => NetMQConfig.Cleanup();
+
+        [Fact]
         public void RequestResponseMultipartMessageWithRetrySucceedsFirstTry()
         {
             const string address = "tcp://127.0.0.1:50001";
@@ -39,15 +41,15 @@ namespace NetMQ.Tests
                 {
                     var responseMessage = RequestSocket.RequestResponseMultipartMessageWithRetry(address,
                         requestMessage, numTries, requestTimeout, progressPublisher);
-                    Assert.IsNotNull(responseMessage);
-                    Assert.AreEqual(1, responseMessage.FrameCount);
+                    Assert.NotNull(responseMessage);
+                    Assert.Equal(1, responseMessage.FrameCount);
                     var responseString = responseMessage.First.ConvertToString();
-                    Assert.AreEqual("Hi", responseString);
+                    Assert.Equal("Hi", responseString);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void RequestResponseMultipartMessageWithRetryFails()
         {
             const string address = "tcp://127.0.0.1:50002";
@@ -76,12 +78,12 @@ namespace NetMQ.Tests
                 {
                     var responseMessage = RequestSocket.RequestResponseMultipartMessageWithRetry(address, requestMessage,
                         numTries, requestTimeout, progressPublisher);
-                    Assert.IsNull(responseMessage);
+                    Assert.Null(responseMessage);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void RequestResponseMultipartMessageWithRetrySucceedsNotOnFirstTry()
         {
             const string address = "tcp://127.0.0.1:50001";
@@ -120,15 +122,15 @@ namespace NetMQ.Tests
                 {
                     var responseMessage = RequestSocket.RequestResponseMultipartMessageWithRetry(address,
                         requestMessage, numTries, requestTimeout, progressPublisher);
-                    Assert.IsNotNull(responseMessage);
-                    Assert.AreEqual(1, responseMessage.FrameCount);
+                    Assert.NotNull(responseMessage);
+                    Assert.Equal(1, responseMessage.FrameCount);
                     var responseString = responseMessage.First.ConvertToString();
-                    Assert.AreEqual("Hi", responseString);
+                    Assert.Equal("Hi", responseString);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void RequestResponseStringWithRetryFails()
         {
             const string address = "tcp://127.0.0.1:50002";
@@ -155,12 +157,12 @@ namespace NetMQ.Tests
                 {
                     var responseMessage = RequestSocket.RequestResponseStringWithRetry(address, "Hi",
                         numTries, requestTimeout, progressPublisher);
-                    Assert.IsNull(responseMessage);
+                    Assert.Null(responseMessage);
                 }
             }
         }
 
-        [Test]
+        [Fact]
         public void RequestResponseStringWithRetrySucceedsNotOnFirstTry()
         {
             const string address = "tcp://127.0.0.1:50001";
@@ -197,11 +199,10 @@ namespace NetMQ.Tests
                 {
                     var responseMessage = RequestSocket.RequestResponseStringWithRetry(address,
                         "Hi", numTries, requestTimeout, progressPublisher);
-                    Assert.AreEqual("Hi", responseMessage);
+                    Assert.Equal("Hi", responseMessage);
                 }
             }
         }
-
-
     }
 }
+#endif

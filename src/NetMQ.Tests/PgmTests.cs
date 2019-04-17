@@ -4,10 +4,9 @@ using System.Net;
 using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
-using NetMQ.Core;
 using NetMQ.Monitoring;
 using NetMQ.Sockets;
-using NUnit.Framework;
+using Xunit;
 
 // ReSharper disable ExceptionNotDocumented
 
@@ -19,12 +18,14 @@ namespace NetMQ.Tests
     //
     // Note: The 224.0.0.1 is the IPv4 All Hosts multicast group which addresses all hosts on the same network segment.
 
-    [TestFixture(Category = "PGM", Explicit = true)]
-    public class PgmTests
+    [Trait("Category", "PGM")]
+    public class PgmTests : IClassFixture<CleanupAfterFixture>
     {
-        [Test]
+        public PgmTests() => NetMQConfig.Cleanup();
+
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void SimplePubSub()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -35,15 +36,14 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void BindBothSockets()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -54,15 +54,14 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void ConnectBothSockets()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -73,16 +72,15 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void UseInterface()
         {
-#if NETCOREAPP1_0            
+#if NETCOREAPP1_0
             var hostEntry = Dns.GetHostEntryAsync(Dns.GetHostName()).Result;
 #else
             var hostEntry = Dns.GetHostEntry(Dns.GetHostName());
@@ -92,7 +90,7 @@ namespace NetMQ.Tests
                 .Where(addr => addr.AddressFamily == AddressFamily.InterNetwork)
                 .Select(addr => addr.ToString())
                 .FirstOrDefault();
-            
+
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -103,18 +101,17 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void SetPgmSettings()
         {
             const int MegaBit = 1024;
             const int MegaByte = 1024;
-            
+
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -132,21 +129,20 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
 
-                Assert.AreEqual(2, pub.Options.MulticastHops);
-                Assert.AreEqual(40*MegaBit, pub.Options.MulticastRate);
-                Assert.AreEqual(TimeSpan.FromMinutes(10), pub.Options.MulticastRecoveryInterval);
-                Assert.AreEqual(MegaByte*10, pub.Options.SendBuffer);
-                Assert.AreEqual(MegaByte*10, sub.Options.ReceiveBuffer);
+                Assert.Equal(2, pub.Options.MulticastHops);
+                Assert.Equal(40*MegaBit, pub.Options.MulticastRate);
+                Assert.Equal(TimeSpan.FromMinutes(10), pub.Options.MulticastRecoveryInterval);
+                Assert.Equal(MegaByte*10, pub.Options.SendBuffer);
+                Assert.Equal(MegaByte*10, sub.Options.ReceiveBuffer);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void TwoSubscribers()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             using (var sub2 = new SubscriberSocket())
@@ -160,18 +156,17 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
 
-                Assert.AreEqual("Hi", sub2.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub2.ReceiveFrameString(out more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void TwoPublishers()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var pub2 = new PublisherSocket())
             using (var sub = new SubscriberSocket())
@@ -184,19 +179,18 @@ namespace NetMQ.Tests
 
                 pub.SendFrame("Hi");
 
-                bool more;
 
-                Assert.AreEqual("Hi", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi", sub.ReceiveFrameString(out bool more));
+                Assert.False(more);
 
                 pub2.SendFrame("Hi2");
 
-                Assert.AreEqual("Hi2", sub.ReceiveFrameString(out more));
-                Assert.IsFalse(more);
+                Assert.Equal("Hi2", sub.ReceiveFrameString(out more));
+                Assert.False(more);
             }
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void Sending1000Messages()
         {
             // creating two different context and sending 1000 messages
@@ -206,7 +200,7 @@ namespace NetMQ.Tests
             var subReady = new ManualResetEvent(false);
 
             Task subTask = Task.Factory.StartNew(() =>
-            {                
+            {
                 using (var sub = new SubscriberSocket())
                 {
                     sub.Bind("pgm://224.0.0.1:5555");
@@ -216,9 +210,8 @@ namespace NetMQ.Tests
 
                     while (count < 1000)
                     {
-                        bool more;
-                        Assert.AreEqual(count, BitConverter.ToInt32(sub.ReceiveFrameBytes(out more), 0));
-                        Assert.IsFalse(more);
+                        Assert.Equal(count, BitConverter.ToInt32(sub.ReceiveFrameBytes(out bool more), 0));
+                        Assert.False(more);
                         count++;
                     }
                 }
@@ -227,7 +220,7 @@ namespace NetMQ.Tests
             subReady.WaitOne();
 
             Task pubTask = Task.Factory.StartNew(() =>
-            {                
+            {
                 using (var pub = new PublisherSocket())
                 {
                     pub.Connect("pgm://224.0.0.1:5555");
@@ -242,14 +235,14 @@ namespace NetMQ.Tests
             });
 
             pubTask.Wait();
-            subTask.Wait();            
+            subTask.Wait();
 
-            Assert.AreEqual(1000, count);
+            Assert.Equal(1000, count);
         }
 
-        [Test]
+        [Fact(Skip = "Requires MSMQ for PGM sockets")]
         public void LargeMessage()
-        {            
+        {
             using (var pub = new PublisherSocket())
             using (var sub = new SubscriberSocket())
             {
@@ -267,17 +260,17 @@ namespace NetMQ.Tests
 
                 byte[] message = sub.ReceiveFrameBytes();
 
-                Assert.AreEqual(3200, message.Length);
+                Assert.Equal(3200, message.Length);
 
                 for (Int16 i = 0; i < 1600; i++)
-                    Assert.AreEqual(i, BitConverter.ToInt16(message, i*2));
+                    Assert.Equal(i, BitConverter.ToInt16(message, i*2));
             }
         }
 
-        [Test]
-        [TestCase("pgm://239.0.0.1:1000")]
-        [TestCase("tcp://localhost:60000")]
-        public void SubsriberCleanupOnUnbind(string address)
+        [Theory(Skip = "Requires MSMQ for PGM sockets")]
+        [InlineData("pgm://239.0.0.1:1000")]
+        [InlineData("tcp://localhost:60000")]
+        public void SubscriberCleanupOnUnbind(string address)
         {
             for (var i = 0; i < 10; i++)
             {
@@ -296,8 +289,9 @@ namespace NetMQ.Tests
 
                         sub.Unbind(address);
 
-                        Assert.That(closed.Wait(1000), Is.True, "Unbind failed to report Closed event to the Monitor");
-                        var duration = DateTime.Now - time;                        
+                        // Unbind failed to report Closed event to the Monitor
+                        Assert.True(closed.Wait(1000));
+//                        var duration = DateTime.Now - time;
 
                         monitor.Stop();
 

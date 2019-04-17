@@ -1,14 +1,16 @@
-﻿using NUnit.Framework;
+using NetMQ.Sockets;
+using Xunit;
 
 namespace NetMQ.Tests
 {
-    [TestFixture]
-    public class ActorTests
+    public class ActorTests : IClassFixture<CleanupAfterFixture>
     {
-        [Test]
+        public ActorTests() => NetMQConfig.Cleanup();
+
+        [Fact]
         public void Simple()
         {
-            ShimAction shimAction = shim =>
+            void ShimAction(PairSocket shim)
             {
                 shim.SignalOK();
 
@@ -22,18 +24,18 @@ namespace NetMQ.Tests
 
                     if (command == "Hello")
                     {
-                        Assert.AreEqual(2, msg.FrameCount);
-                        Assert.AreEqual("Hello", msg[1].ConvertToString());
+                        Assert.Equal(2, msg.FrameCount);
+                        Assert.Equal("Hello", msg[1].ConvertToString());
                         shim.SendFrame("World");
                     }
                 }
-            };
+            }
 
-            using (var actor = NetMQActor.Create(shimAction))
+            using (var actor = NetMQActor.Create(ShimAction))
             {
                 actor.SendMoreFrame("Hello").SendFrame("Hello");
 
-                Assert.AreEqual("World", actor.ReceiveFrameString());
+                Assert.Equal("World", actor.ReceiveFrameString());
             }
         }
     }

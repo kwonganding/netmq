@@ -133,7 +133,7 @@ namespace NetMQ.Core
         private State m_state;
 
         /// <summary>
-        /// If <c>true</c>, we receive all the pending inbound messages before terminating. 
+        /// If <c>true</c>, we receive all the pending inbound messages before terminating.
         /// If <c>false</c>, we terminate immediately when the peer asks us to.
         /// </summary>
         private bool m_delay;
@@ -231,6 +231,12 @@ namespace NetMQ.Core
         /// </summary>
         [CanBeNull]
         public byte[] Identity { get; set; }
+        
+        /// <summary>
+        /// Get or set the byte-array that comprises the routing id of this Pipe.
+        /// </summary>
+        [CanBeNull]
+        public byte[] RoutingId { get; set; }
 
         /// <summary>
         /// Checks if there is at least one message to read in the pipe.
@@ -294,7 +300,7 @@ namespace NetMQ.Core
         }
 
         /// <summary>
-        /// Check whether messages can be written to the pipe. If writing 
+        /// Check whether messages can be written to the pipe. If writing
         /// the message would cause high watermark the function returns false.
         /// </summary>
         /// <returns><c>true</c> if message can be written to the pipe; <c>false</c> otherwise. </returns>
@@ -574,7 +580,7 @@ namespace NetMQ.Core
         {
             if (predefinedLowWatermark > 0 && predefinedLowWatermark < highWatermark)
                 return predefinedLowWatermark;
- 
+
             // Compute the low water mark. Following point should be taken
             // into consideration:
             //
